@@ -3,20 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aviator Game</title>
+  <title>Pilot Aviator Game</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <h1>⚽ Pilot Aviator</h1>
-  
+
+  <div id="history"></div>
+
   <div id="game">
     <canvas id="curveCanvas" width="800" height="400"></canvas>
     <div id="multiplier">1.00x</div>
+    <img id="ball" src="https://upload.wikimedia.org/wikipedia/commons/d/d3/Soccerball.svg" alt="ball">
   </div>
 
   <div class="controls">
-    <button id="startBtn">Place Bet</button>
-    <button id="cashOutBtn">Cash Out</button>
+    <div class="bet-buttons">
+      <button class="bet-amt" data-amt="1">1</button>
+      <button class="bet-amt" data-amt="2">2</button>
+      <button class="bet-amt" data-amt="5">5</button>
+      <button class="bet-amt" data-amt="10">10</button>
+      <button class="bet-amt" id="half">½</button>
+      <button class="bet-amt" id="double">x2</button>
+      <button class="bet-amt" id="max">Max</button>
+    </div>
+    <div>
+      <button id="startBtn">Place Bet</button>
+      <button id="cashOutBtn">Cash Out</button>
+    </div>
   </div>
 
   <script src="script.js"></script>
