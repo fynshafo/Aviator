@@ -1,37 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pilot Aviator</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pilot Aviator — Smooth</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <h1>⚽ Pilot Aviator</h1>
+  <header>
+    <div class="title-wrap">
+      <img class="logo" src="https://upload.wikimedia.org/wikipedia/commons/d/d3/Soccerball.svg" alt="logo">
+      <h1>Pilot Aviator</h1>
+    </div>
+  </header>
 
-    <!-- History Bar -->
-    <div id="history-bar"></div>
+  <!-- History Bar -->
+  <div id="history-bar" aria-live="polite"></div>
 
-    <!-- Game Area -->
-    <canvas id="gameCanvas" width="800" height="400"></canvas>
+  <!-- Canvas area -->
+  <div id="game-wrap">
+    <canvas id="gameCanvas"></canvas>
 
-    <!-- Bet Controls -->
-    <div id="controls">
-        <div class="bet-buttons">
-            <button onclick="setBet(1)">1</button>
-            <button onclick="setBet(2)">2</button>
-            <button onclick="setBet(5)">5</button>
-            <button onclick="setBet(10)">10</button>
-            <button onclick="halfBet()">½</button>
-            <button onclick="doubleBet()">x2</button>
-            <button onclick="maxBet()">Max</button>
-        </div>
-        <div class="action-buttons">
-            <button onclick="placeBet()">Place Bet</button>
-            <button onclick="cashOut()">Cash Out</button>
-        </div>
+    <!-- Big multiplier display (top-right of ball) -->
+    <div id="big-mult">1.00x</div>
+  </div>
+
+  <!-- Controls -->
+  <div id="controls">
+    <div class="bet-row">
+      <button class="bet-btn" data-amt="1">1</button>
+      <button class="bet-btn" data-amt="2">2</button>
+      <button class="bet-btn" data-amt="5">5</button>
+      <button class="bet-btn" data-amt="10">10</button>
+      <button class="bet-btn" data-action="half">½</button>
+      <button class="bet-btn" data-action="double">x2</button>
+      <button class="bet-btn" data-action="max">Max</button>
     </div>
 
-    <script src="script.js"></script>
+    <div class="action-row">
+      <div id="bet-display">Bet: <span id="bet-value">1</span></div>
+      <button id="place-btn" class="action-btn">Place Bet</button>
+      <button id="cash-btn" class="action-btn" disabled>Cash Out</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
