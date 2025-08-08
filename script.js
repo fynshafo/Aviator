@@ -1,96 +1,100 @@
-const canvas = document.getElementById("curveCanvas");
+const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-const multiplierDisplay = document.getElementById("multiplier");
-const ball = document.getElementById("ball");
-const historyDiv = document.getElementById("history");
 
-let multiplier = 1.00;
-let running = false;
-let crashPoint = 0;
+let footballImg = new Image();
+footballImg.src = "https://upload.wikimedia.org/wikipedia/commons/d/d3/Soccerball.svg";
+
+let curvePoints = [];
 let t = 0;
-let betAmount = 1;
+let multiplier = 1.0;
+let running = false;
+let betAmount = 0;
 let history = [];
 
-function drawCurve() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.strokeStyle = "yellow";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-
-  for (let x = 0; x < t; x++) {
-    const y = Math.pow(1.02, x / 10);
-    ctx.lineTo(x, canvas.height - y * 20);
-  }
-  ctx.stroke();
+// Generate a smooth curve path
+for (let x = 0; x <= 800; x += 5) {
+    let y = 350 - (Math.log(x + 1) * 50); // curve shape
+    curvePoints.push({ x, y });
 }
 
-function moveBall() {
-  const y = Math.pow(1.02, t / 10);
-  ball.style.left = `${t}px`;
-  ball.style.top = `${canvas.height - y * 20 - 20}px`;
-}
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-function updateHistory(val) {
-  history.unshift(val);
-  if (history.length > 10) history.pop();
-  historyDiv.innerHTML = "";
-  history.forEach(num => {
-    const div = document.createElement("div");
-    div.textContent = num + "x";
-    div.classList.add("history-item");
-    if (num < 2) div.classList.add("low");
-    else if (num < 10) div.classList.add("medium");
-    else div.classList.add("high");
-    historyDiv.appendChild(div);
-  });
-}
-
-function startGame() {
-  running = true;
-  crashPoint = (Math.random() * 15 + 1).toFixed(2);
-  multiplier = 1.00;
-  t = 0;
-  update();
-}
-
-function update() {
-  if (!running) return;
-  t += 2;
-  multiplier *= 1.01;
-  multiplierDisplay.textContent = multiplier.toFixed(2) + "x";
-  drawCurve();
-  moveBall();
-
-  if (multiplier >= crashPoint) {
-    multiplierDisplay.textContent = "💥 Crash at " + crashPoint + "x";
-    running = false;
-    updateHistory(parseFloat(crashPoint));
-    return;
-  }
-  requestAnimationFrame(update);
-}
-
-document.getElementById("startBtn").onclick = startGame;
-document.getElementById("cashOutBtn").onclick = () => {
-  if (running) {
-    running = false;
-    multiplierDisplay.textContent = "✅ Cashed out at " + multiplier.toFixed(2) + "x";
-    updateHistory(parseFloat(multiplier.toFixed(2)));
-  }
-};
-
-// Bet amount buttons
-document.querySelectorAll(".bet-amt").forEach(btn => {
-  btn.onclick = () => {
-    if (btn.dataset.amt) {
-      betAmount = parseFloat(btn.dataset.amt);
-    } else if (btn.id === "half") {
-      betAmount /= 2;
-    } else if (btn.id === "double") {
-      betAmount *= 2;
-    } else if (btn.id === "max") {
-      betAmount = 100; // example max
+    // Draw yellow curve
+    ctx.beginPath();
+    ctx.moveTo(curvePoints[0].x, curvePoints[0].y);
+    ctx.strokeStyle = "yellow";
+    ctx.lineWidth = 3;
+    for (let i = 1; i < curvePoints.length; i++) {
+        ctx.lineTo(curvePoints[i].x, curvePoints[i].y);
     }
-    console.log("Bet set to:", betAmount);
-  };
-});
+    ctx.stroke();
+
+    if (running) {
+        let pos = curvePoints[t];
+        ctx.drawImage(footballImg, pos.x - 25, pos.y - 25, 50, 50);
+
+        ctx.fillStyle = "white";
+        ctx.font = "24px Arial";
+        ctx.fillText(multiplier.toFixed(2) + "x", pos.x + 40, pos.y);
+
+        t += 1;
+        multiplier += 0.02;
+
+        if (t >= curvePoints.length) {
+            endRound();
+        }
+    }
+}
+
+function updateHistory(value) {
+    history.unshift(value.toFixed(2) + "x");
+    if (history.length > 8) history.pop();
+
+    let bar = document.getElementById("history-bar");
+    bar.innerHTML = "";
+    history.forEach(val => {
+        let span = document.createElement("span");
+        span.innerText = val;
+        span.className = parseFloat(val) > 2 ? "green" : "red";
+        bar.appendChild(span);
+    });
+}
+
+function placeBet() {
+    if (!running) {
+        t = 0;
+        multiplier = 1.0;
+        running = true;
+    }
+}
+
+function cashOut() {
+    if (running) {
+        alert(`Cashed out at ${multiplier.toFixed(2)}x with ₹${(betAmount * multiplier).toFixed(2)}`);
+        endRound();
+    }
+}
+
+function endRound() {
+    running = false;
+    updateHistory(multiplier);
+}
+
+function setBet(amount) {
+    betAmount = amount;
+}
+
+function halfBet() {
+    betAmount = Math.max(1, betAmount / 2);
+}
+
+function doubleBet() {
+    betAmount *= 2;
+}
+
+function maxBet() {
+    betAmount = 100;
+}
+
+setInterval(draw, 30);
