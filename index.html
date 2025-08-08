@@ -1,28 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pilot Aviator</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pilot Aviator — Continuous</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div class="history-bar" id="history"></div>
-    <canvas id="gameCanvas"></canvas>
-    <div class="controls">
-        <div class="bet-buttons">
-            <button onclick="setBet(1)">1</button>
-            <button onclick="setBet(2)">2</button>
-            <button onclick="setBet(5)">5</button>
-            <button onclick="setBet(10)">10</button>
-            <button onclick="halfBet()">½</button>
-            <button onclick="doubleBet()">x2</button>
-            <button onclick="maxBet()">Max</button>
-        </div>
-        <div class="bet-display">Bet: <span id="betAmount">1</span></div>
-        <button id="placeBetBtn" onclick="placeBet()">Place Bet</button>
-        <button id="cashOutBtn" onclick="cashOut()" disabled>Cash Out</button>
+  <header>
+    <div class="title">⚽ Pilot Aviator — Continuous Mode</div>
+  </header>
+
+  <section id="top-row">
+    <div id="history" aria-live="polite"></div>
+    <div id="info">
+      <div>Balance: ₹<span id="balance">1000</span></div>
+      <div>Round: <span id="round-num">0</span></div>
+      <div id="status">Status: <span id="round-state">waiting</span></div>
     </div>
-    <script src="script.js"></script>
+  </section>
+
+  <main id="game-wrap">
+    <canvas id="gameCanvas"></canvas>
+    <div id="mult-display">1.00x</div>
+  </main>
+
+  <section id="controls">
+    <div class="bet-buttons">
+      <button class="amt" data-amt="1">1</button>
+      <button class="amt" data-amt="2">2</button>
+      <button class="amt" data-amt="5">5</button>
+      <button class="amt" data-amt="10">10</button>
+      <button class="amt" data-action="half">½</button>
+      <button class="amt" data-action="double">x2</button>
+      <button class="amt" data-action="max">Max</button>
+    </div>
+
+    <div class="action-row">
+      <div>Bet: ₹<span id="betValue">1</span></div>
+      <button id="placeBtn">Place Bet</button>
+      <button id="cashBtn" disabled>Cash Out</button>
+    </div>
+  </section>
+
+  <script src="script.js"></script>
 </body>
 </html>
