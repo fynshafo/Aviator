@@ -5,9 +5,27 @@ body {
   text-align: center;
 }
 
+#history {
+  margin: 10px auto;
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.history-item {
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.low { background: #cc0000; }
+.medium { background: #e6b800; }
+.high { background: #ffcc00; color: black; }
+
 #game {
   margin: auto;
-  margin-top: 20px;
+  margin-top: 10px;
   width: 90%;
   height: 400px;
   background: #006600;
@@ -31,8 +49,19 @@ canvas {
   font-weight: bold;
 }
 
+#ball {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  pointer-events: none;
+}
+
 .controls {
   margin-top: 20px;
+}
+
+.bet-buttons {
+  margin-bottom: 10px;
 }
 
 button {
@@ -41,7 +70,7 @@ button {
   color: white;
   border: none;
   border-radius: 5px;
-  font-size: 1.2rem;
+  font-size: 1rem;
   cursor: pointer;
   margin: 5px;
 }
@@ -49,4 +78,3 @@ button {
 button:hover {
   background: #cc0000;
 }
-
