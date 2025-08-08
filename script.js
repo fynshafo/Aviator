@@ -1,359 +1,381 @@
-// Continuous Aviator-like demo
+/* Continuous Aviator (plane) with realistic RNG, auto-restart,
+   start-from-origin, moving X-axis ticks, betting + auto-cashout.
+*/
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-
 let DPR = window.devicePixelRatio || 1;
 
-// Responsive canvas
-function resize() {
-  const wrapWidth = Math.min(1100, Math.max(320, window.innerWidth * 0.86));
-  const height = window.innerWidth < 720 ? 320 : 420;
-  canvas.style.width = wrapWidth + 'px';
-  canvas.style.height = height + 'px';
-  canvas.width = Math.floor(wrapWidth * DPR);
-  canvas.height = Math.floor(height * DPR);
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  buildCurve();
-}
-window.addEventListener('resize', resize);
-
-// UI elements
+// DOM
 const historyEl = document.getElementById('history');
 const multDisplay = document.getElementById('mult-display');
 const balanceEl = document.getElementById('balance');
 const roundStateEl = document.getElementById('round-state');
 const roundNumEl = document.getElementById('round-num');
 
-const betValueEl = document.getElementById('betValue');
+const betInput = document.getElementById('bet-input');
 const placeBtn = document.getElementById('placeBtn');
 const cashBtn = document.getElementById('cashBtn');
+const autoToggle = document.getElementById('autoToggle');
+const autoInput = document.getElementById('autoInput');
 
+// initial demo balance
 let balance = 1000;
 balanceEl.textContent = balance.toFixed(2);
 
-// preload ball image
-const ballImg = new Image();
-ballImg.crossOrigin = 'anonymous';
-ballImg.src = 'https://upload.wikimedia.org/wikipedia/commons/d/d3/Soccerball.svg';
+// plane SVG as data URI (simple plane)
+const planeSVG = `
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+  <g fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 32c18-1 36-5 58-12" opacity="0.15" />
+    <path d="M4 32 L60 8 L54 36 L62 48 L40 36 L20 44 Z" fill="#fff" opacity="0.95"/>
+  </g>
+</svg>`;
+const planeImg = new Image();
+planeImg.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(planeSVG);
+planeImg.crossOrigin = 'anonymous';
+
+// responsive canvas
+function resizeCanvas() {
+  const cssWidth = Math.min(1100, Math.max(360, window.innerWidth * 0.86));
+  const cssHeight = window.innerWidth < 720 ? 320 : 420;
+  canvas.style.width = cssWidth + 'px';
+  canvas.style.height = cssHeight + 'px';
+  canvas.width = Math.floor(cssWidth * DPR);
+  canvas.height = Math.floor(cssHeight * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  buildCurve();
+}
+window.addEventListener('resize', resizeCanvas);
+
+// curve & axes
+const leftPad = 60;
+const bottomPad = 40;
+let curvePoints = []; // pixel coords
+
+function buildCurve() {
+  curvePoints = [];
+  const W = canvas.width / DPR;
+  const H = canvas.height / DPR;
+  const baseY = H - bottomPad;
+  // scale chosen to make curve like reference
+  const scale = Math.max(220, (W - leftPad) / 3.2);
+  for (let x = 0; x <= W - leftPad; x += 1) {
+    // exponential/log shape but smoothed for reference look
+    const y = baseY - Math.log(1 + x / scale) * 92;
+    curvePoints.push({ x: leftPad + x, y });
+  }
+}
+
+// realistic RNG with heavy-tail, allowing up to big multipliers
+function chooseCrashMultiplier() {
+  const r = Math.random();
+  if (r < 0.40) {
+    // frequent: 1.00 - 1.99
+    return +(1 + Math.random() * 0.99).toFixed(2);
+  } else if (r < 0.75) {
+    // medium: 2 - 10
+    return +(2 + Math.random() * 8).toFixed(2);
+  } else if (r < 0.92) {
+    // big: 10 - 60
+    return +(10 + Math.random() * 50).toFixed(2);
+  } else {
+    // rare huge tail: power-law-style (can go high, but clamp)
+    const tail = Math.pow(1 / (1 - Math.random()), 0.9);
+    return +Math.min(1000, 50 + tail * 10).toFixed(2);
+  }
+}
+
+// growth tuning to match reference: slow start, accelerates later
+const growthBase = 0.22; // smaller = slower; tuned to be like reference
+
+// convert multiplier -> time (t seconds) via mult = exp(growthBase * t)
+function multToTime(mult) {
+  return Math.log(Math.max(1.0001, mult)) / growthBase; // seconds
+}
+function timeToMult(t) {
+  return Math.exp(growthBase * t);
+}
 
 // game state (continuous rounds)
 let round = 0;
 let roundStart = 0;
-let crashMultiplier = 1.0;
-let growthBase = 0.28;         // controls speed (kept slow)
+let crashMult = 1;
+let roundDurationMs = 0;
 let running = false;
 let pausedAfterCrash = false;
-let roundDuration = 0;         // seconds until crash based on chosen crashMultiplier
+let history = []; // numeric
 
-// rendering curve & axis
-let curve = []; // points {x,y} in canvas coordinates (CSS px)
-const leftPad = 60;
-const bottomPad = 40;
+// bets for current round (player-only demo)
+// structure: { id, amount, placedAtRound, cashed:bool, cashAt: num|null }
+let activeBets = [];
+let betId = 0;
 
-function buildCurve(){
-  curve = [];
-  const W = canvas.width / DPR;
-  const H = canvas.height / DPR;
-  const baseY = H - bottomPad;
-  const scale = Math.max(220, W / 3.5);
-  // x from 0..W-leftPad
-  for(let x = 0; x <= W - leftPad; x += 1){
-    // curve shape formula (log style) - vertical in px
-    const y = baseY - Math.log(1 + x / scale) * 78;
-    curve.push({x: leftPad + x, y});
-  }
+// helpers: UI history render with color rules
+function addHistoryValue(v) {
+  history.unshift(v);
+  if (history.length > 20) history.pop();
+  renderHistory();
 }
-
-// realistic random crash generator (heavy tail, mostly small, sometimes large)
-function chooseCrash(){
-  const r = Math.random();
-  if (r < 0.62) {
-    // common: 1.00 - 2.50
-    return +(1 + Math.random() * 1.5).toFixed(2);
-  } else if (r < 0.9) {
-    // medium: 2.5 - 8
-    return +(2.5 + Math.random() * 5.5).toFixed(2);
-  } else {
-    // rare big tail: use power-law-ish heavy tail
-    const tail = Math.pow(1 / (1 - Math.random()), 0.7);
-    return +Math.min(200, 6 + tail).toFixed(2);
-  }
-}
-
-// compute crash time (seconds) from chosen crashMultiplier using growthBase
-function computeCrashTime(mult){
-  // mult = exp(growthBase * t)  => t = ln(mult) / growthBase
-  return Math.log(Math.max(1.0001, mult)) / growthBase;
+function renderHistory() {
+  historyEl.innerHTML = '';
+  history.forEach(v => {
+    const d = document.createElement('div');
+    d.className = 'chip ' + (v < 2 ? 'h-red' : (v <= 10 ? 'h-yellow' : 'h-green'));
+    d.textContent = v.toFixed(2) + 'x';
+    historyEl.appendChild(d);
+  });
 }
 
 // round lifecycle
-function startRound(){
+function startRound() {
   round++;
   roundStart = performance.now();
-  crashMultiplier = chooseCrash();
-  roundDuration = computeCrashTime(crashMultiplier) * 1000; // ms
+  crashMult = chooseCrashMultiplier();
+  roundDurationMs = multToTime(crashMult) * 1000;
   running = true;
   pausedAfterCrash = false;
+  activeBets = activeBets.filter(b => b.cashed); // remove already cashed ones if any
   roundStateEl.textContent = 'running';
   roundNumEl.textContent = round;
-  // clear active bets for this round (we keep bets in activeBets array)
-  activeBets = [];
+  cashBtn.disabled = activeBets.length === 0;
 }
-function endRoundCrash(curMult){
-  // push crash to history, show state, briefly pause then next round
-  addHistory(curMult, 'crash');
+function handleCrash() {
   running = false;
   pausedAfterCrash = true;
   roundStateEl.textContent = 'crashed';
-  multDisplay.textContent = `💥 ${curMult.toFixed(2)}x`;
+  multDisplay.textContent = `💥 ${crashMult.toFixed(2)}x`;
+  // mark non-cashed bets as lost (they already deducted from balance)
+  // record crash in history
+  addHistoryValue(crashMult);
   cashBtn.disabled = true;
-  setTimeout(()=> {
-    // short pause and start new round
+  // short pause then restart
+  setTimeout(() => {
     pausedAfterCrash = false;
+    // small visual reset
+    multDisplay.textContent = '1.00x';
     startRound();
-  }, 1500);
+  }, 1800);
 }
 
-// history UI
-let history = [];
-function addHistory(val, kind='crash'){
-  history.unshift(val);
-  if(history.length > 12) history.pop();
-  renderHistory();
-}
-function renderHistory(){
-  historyEl.innerHTML = '';
-  history.forEach(v => {
-    const span = document.createElement('div');
-    span.className = 'h-item ' + (v >= 2 ? 'h-green' : 'h-red');
-    span.textContent = v.toFixed(2) + 'x';
-    historyEl.appendChild(span);
-  });
-}
-
-// active bets for the *current round* (objects: {id, amount, cashed:false, cashedAt:null})
-let activeBets = [];
-let myBetIdCounter = 0;
-let currentPlacedAmount = 1;
-betValueEl.textContent = currentPlacedAmount;
-
-// UI wiring for bet amount buttons
-document.querySelectorAll('.amt').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    const a = btn.dataset.amt;
-    const action = btn.dataset.action;
-    if (a) {
-      currentPlacedAmount = Number(a);
-    } else if (action === 'half'){
-      currentPlacedAmount = Math.max(1, Math.floor(currentPlacedAmount/2));
-    } else if (action === 'double'){
-      currentPlacedAmount = currentPlacedAmount * 2;
-    } else if (action === 'max'){
-      currentPlacedAmount = Math.min(99999, Math.floor(balance)); // cap
-    }
-    betValueEl.textContent = currentPlacedAmount;
-  });
-});
-
-placeBtn.addEventListener('click', ()=>{
-  // placing a bet attaches it to the current running round
-  if (balance < currentPlacedAmount) {
+// betting & cashout logic
+placeBtn.addEventListener('click', () => {
+  const a = Math.max(1, Math.floor(Number(betInput.value) || 1));
+  if (balance < a) {
     alert('Not enough balance');
     return;
   }
-  // lock amount from balance immediately (simulate placed bet)
-  balance -= currentPlacedAmount;
+  // deduct immediately
+  balance -= a;
   balanceEl.textContent = balance.toFixed(2);
-
-  const bet = {
-    id: ++myBetIdCounter,
-    amount: currentPlacedAmount,
-    cashed: false,
-    cashedAt: null,
-    round: round
-  };
+  // register bet on current round (even if round is near end a player can still place)
+  const bet = { id: ++betId, amount: a, roundPlaced: round, cashed: false, cashAt: null };
   activeBets.push(bet);
-  // allow cash out button
   cashBtn.disabled = false;
 });
-cashBtn.addEventListener('click', ()=>{
-  // cash out all active (not yet cashed) bets at current multiplier
+cashBtn.addEventListener('click', () => {
   if (!running) return;
-  const currentMultiplier = getCurrentMultiplier();
-  let totalPayout = 0;
+  const curMult = getCurrentMult();
+  let payout = 0;
   activeBets.forEach(b => {
-    if (!b.cashed){
+    if (!b.cashed) {
       b.cashed = true;
-      b.cashedAt = currentMultiplier;
-      const payout = b.amount * currentMultiplier;
-      totalPayout += payout;
+      b.cashAt = curMult;
+      payout += b.amount * curMult;
     }
   });
-  if (totalPayout > 0){
-    balance += totalPayout;
+  if (payout > 0) {
+    balance += payout;
     balanceEl.textContent = balance.toFixed(2);
-    // record payouts into history as cashouts (optional)
-    addHistory(currentMultiplier, 'cash');
+    addHistoryValue(curMult); // note: treat as cashout entry also in history for visibility
   }
-  // disable cash until next place
   cashBtn.disabled = true;
 });
 
-// get multiplier at current time (smooth)
-function getCurrentMultiplier(){
-  if (!running) return 1.00;
-  const elapsed = (performance.now() - roundStart) / 1000; // s
-  // smooth growth: slow early then slight acceleration
-  const mult = Math.exp(growthBase * elapsed) ; // exponential, growthBase small
-  return Math.max(1.0, mult);
+// auto-cashout admin
+function processAutoCashout() {
+  if (!running || !autoToggle.checked) return;
+  const target = Math.max(1.01, Number(autoInput.value) || 1.01);
+  const cur = getCurrentMult();
+  if (cur >= target) {
+    // cash out all active bets
+    let payout = 0;
+    activeBets.forEach(b => {
+      if (!b.cashed) {
+        b.cashed = true;
+        b.cashAt = cur;
+        payout += b.amount * cur;
+      }
+    });
+    if (payout > 0) {
+      balance += payout;
+      balanceEl.textContent = balance.toFixed(2);
+      addHistoryValue(cur);
+    }
+    cashBtn.disabled = true;
+  }
 }
 
-// drawing: axes, ticks (x-axis moving), curve leading edge, ball
-function draw(){
-  // clear
-  ctx.clearRect(0,0,canvas.width / DPR, canvas.height / DPR);
+// compute current multiplier smoothly
+function getCurrentMult() {
+  if (!running) return 1.0;
+  const elapsed = (performance.now() - roundStart) / 1000; // seconds
+  return Math.max(1.0, timeToMult(elapsed));
+}
+
+// drawing: axes, moving X ticks, curve, highlighted path, plane
+function draw() {
+  ctx.clearRect(0, 0, canvas.width / DPR, canvas.height / DPR);
   const W = canvas.width / DPR;
   const H = canvas.height / DPR;
 
-  // background panel (rounded)
+  // background panel
   ctx.fillStyle = 'rgba(0,0,0,0.04)';
   roundRect(ctx, 0, 0, W, H, 8);
   ctx.fill();
 
-  // draw Y axis (fixed)
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 1.4;
+  // Y axis fixed (left)
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+  ctx.lineWidth = 1.2;
   ctx.beginPath();
   ctx.moveTo(leftPad - 10, 12);
-  ctx.lineTo(leftPad - 10, H - bottomPad + 6);
+  ctx.lineTo(leftPad - 10, H - bottomPad + 8);
   ctx.stroke();
 
-  // draw X axis (fixed baseline) but ticks will move
+  // X axis baseline
   ctx.beginPath();
   ctx.moveTo(leftPad - 10, H - bottomPad);
   ctx.lineTo(W - 12, H - bottomPad);
   ctx.stroke();
 
-  // moving tick marks on X axis -> offset by progress so they appear to move left as ball advances
-  const tickSpacing = 60; // px
-  // compute shift according to current multiplier progress (so ticks slide as ball moves)
-  const progressX = getProgressX(); // px from origin
-  const shift = progressX % tickSpacing;
-  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-  for(let tx = leftPad - shift; tx < W; tx += tickSpacing){
+  // moving ticks (so X appears to slide left with plane)
+  const tick = 60;
+  const progressX = getProgressIndex(); // px along curve length
+  const shift = progressX % tick;
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  for (let x = leftPad - shift; x < W; x += tick) {
     ctx.beginPath();
-    ctx.moveTo(tx, H - bottomPad - 6);
-    ctx.lineTo(tx, H - bottomPad + 6);
+    ctx.moveTo(x, H - bottomPad - 6);
+    ctx.lineTo(x, H - bottomPad + 6);
     ctx.stroke();
   }
 
-  // draw baseline origin label
+  // small origin label
   ctx.fillStyle = '#fff';
   ctx.font = '12px Arial';
-  ctx.fillText('0', leftPad - 20, H - bottomPad + 18);
+  ctx.fillText('0', leftPad - 18, H - bottomPad + 18);
 
-  // draw full faint curve (base)
+  // draw faint full curve
   ctx.lineWidth = 2;
-  ctx.strokeStyle = 'rgba(255,215,0,0.25)';
+  ctx.strokeStyle = 'rgba(255,215,0,0.22)';
   ctx.beginPath();
-  for(let i=0;i<curve.length;i++){
-    const p = curve[i];
+  for (let i = 0; i < curvePoints.length; i++) {
+    const p = curvePoints[i];
     if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
   }
   ctx.stroke();
 
-  // if running, compute multiplier and current position on curve
-  if (running){
-    const curMult = getCurrentMultiplier();
-
-    // determine how far along curve to draw/highlight using multiplier mapping
-    // map multiplier -> xPixels: use inverse of curve generation (approx): we used x increment = 1 px for curve
-    // compute ideal x offset proportional to ln(mult)
-    // earlier crashTime = ln(mult)/growthBase ; posX approx = (elapsed/crashTime) * curve.length
+  // if running, compute progress and highlight
+  if (running) {
     const elapsed = (performance.now() - roundStart);
-    const progress = Math.min(elapsed / roundDuration, 1.0); // 0..1
-    const posIndex = Math.floor(progress * (curve.length - 1));
-    const pos = curve[Math.max(0, Math.min(curve.length - 1, posIndex))];
+    const progress = Math.min(elapsed / roundDurationMs, 1);
+    const idx = Math.floor(progress * (curvePoints.length - 1));
+    const pos = curvePoints[Math.max(0, Math.min(curvePoints.length - 1, idx))];
 
-    // highlight path up to pos
+    // highlight path
     ctx.lineWidth = 4;
     ctx.strokeStyle = '#ffd400';
     ctx.beginPath();
-    for(let i=0;i<=posIndex;i++){
-      const p = curve[i];
-      if (i===0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    for (let i = 0; i <= idx; i++) {
+      const p = curvePoints[i];
+      if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
     }
     ctx.stroke();
 
-    // draw ball
-    const ballSize = 36;
-    if (ballImg.complete){
-      ctx.drawImage(ballImg, pos.x - ballSize/2, pos.y - ballSize/2, ballSize, ballSize);
+    // draw plane (scale slightly with multiplier to give depth)
+    const curMult = getCurrentMult();
+    const planeSize = Math.min(64, 28 + Math.log(Math.max(1, curMult)) * 10);
+    if (planeImg.complete) {
+      ctx.drawImage(planeImg, pos.x - planeSize / 2, pos.y - planeSize / 2, planeSize, planeSize);
     } else {
       ctx.fillStyle = '#fff';
       ctx.beginPath();
-      ctx.arc(pos.x, pos.y, 10, 0, Math.PI*2);
+      ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // show multiplier near ball
+    // update multiplier label near plane
     multDisplay.style.left = (pos.x + 18) + 'px';
     multDisplay.style.top = (pos.y - 28) + 'px';
     multDisplay.textContent = curMult.toFixed(2) + 'x';
 
-    // check for crash
-    if (curMult >= crashMultiplier || progress >= 0.9999){
-      // crash occurs
-      endRoundCrash(crashMultiplier);
+    // auto cashout check
+    processAutoCashout();
+
+    // crash check
+    if (curMult >= crashMult || progress >= 0.999999) {
+      handleCrash();
     }
   } else {
-    // idle/paused state - show ball at origin with small idle segment
-    const p = curve[0];
-    multDisplay.style.left = (p.x + 18) + 'px';
-    multDisplay.style.top = (p.y - 28) + 'px';
+    // idle: show plane at origin (curve[0]) when not running (small idle segment)
+    const p0 = curvePoints[0];
+    multDisplay.style.left = (p0.x + 18) + 'px';
+    multDisplay.style.top = (p0.y - 28) + 'px';
     if (!pausedAfterCrash) multDisplay.textContent = '1.00x';
   }
 
   requestAnimationFrame(draw);
 }
 
-function getProgressX(){
+// progress index in pixels along curve (for tick shift)
+function getProgressIndex() {
   if (!running) return 0;
   const elapsed = (performance.now() - roundStart);
-  const progress = Math.min(elapsed / roundDuration, 1.0);
-  // map progress to pixels along curve length
-  return progress * (curve.length - 1);
+  const progress = Math.min(elapsed / roundDurationMs, 1);
+  return progress * (curvePoints.length - 1);
 }
 
 // utility roundRect
-function roundRect(ctx,x,y,w,h,r){
+function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
-  ctx.moveTo(x+r,y);
-  ctx.arcTo(x+w,y,x+w,y+h,r);
-  ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r);
-  ctx.arcTo(x,y,x+w,y,r);
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
   ctx.closePath();
 }
 
-// start first round with small delay so UI loads
-resize();
+// init
+resizeCanvas();
 renderHistory();
-let initialDelay = 600;
-setTimeout(()=> {
+
+// start the first round after a tiny delay
+setTimeout(() => {
   startRound();
-  // main draw loop
   requestAnimationFrame(draw);
-}, initialDelay);
+}, 600);
 
-// auto-new-round when crashed: implemented in endRoundCrash -> startRound after delay
+// expose some helpers for presets
+document.querySelectorAll('.preset').forEach(b => {
+  b.addEventListener('click', () => {
+    betInput.value = b.dataset.val;
+  });
+});
+document.getElementById('half').addEventListener('click', () => {
+  betInput.value = Math.max(1, Math.floor(Number(betInput.value || 1) / 2));
+});
+document.getElementById('double').addEventListener('click', () => {
+  betInput.value = Math.max(1, Math.floor(Number(betInput.value || 1) * 2));
+});
+document.getElementById('max').addEventListener('click', () => {
+  betInput.value = Math.max(1, Math.floor(balance));
+});
 
-// expose a slow debug start if needed
-// helper: if a player places a bet while not running, allow it to be queued (we will still start new rounds autonomy above)
-
-// update UI round state periodically
-setInterval(()=>{
-  document.getElementById('round-state').textContent = running ? 'running' : (pausedAfterCrash ? 'crashed' : 'idle');
-}, 300);
-
-// small autosave (not necessary in demo)
+/* Notes:
+ - Balance is just demo local state here.
+ - Bets deduct immediately; cashout returns bet*mult.
+ - History chips colored: red <2x, yellow 2–10x, green >10x.
+ - crashMult can be large (rare), up to 1000x clamp in RNG.
+ - Tweak growthBase to slow/speed rounds. Lower -> slower.
+ */
