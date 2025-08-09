@@ -1,50 +1,55 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Pilot Aviator — Football (Continuous)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Pilot Aviator — Mobile (Football)</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header><div class="title">⚽ Pilot Aviator — Continuous</div></header>
+  <header>
+    <div class="title">⚽ Pilot Aviator — Mobile</div>
+  </header>
 
-  <section id="topbar">
-    <div id="history" aria-live="polite"></div>
-    <div id="info">
-      <div>Balance: ₹<span id="balance">1000.00</span></div>
-      <div>Round: <span id="round-num">0</span></div>
-      <div>Status: <span id="round-state">idle</span></div>
-    </div>
-  </section>
+  <main id="app">
+    <section id="topbar">
+      <div id="history" aria-live="polite"></div>
+      <div id="info">
+        <div>Bal: ₹<span id="balance">1000</span></div>
+        <div>Rnd: <span id="round-num">0</span></div>
+      </div>
+    </section>
 
-  <main id="game-area">
-    <canvas id="gameCanvas"></canvas>
-    <div id="mult-display">1.00x</div>
+    <section id="game-wrap">
+      <canvas id="gameCanvas"></canvas>
+      <div id="mult-display">1.00x</div>
+    </section>
+
+    <section id="controls">
+      <div class="row">
+        <input id="bet-input" type="number" min="1" step="1" value="1" inputmode="numeric" />
+        <button class="preset" data-val="1">1</button>
+        <button class="preset" data-val="2">2</button>
+        <button class="preset" data-val="5">5</button>
+        <button class="preset" data-val="10">10</button>
+      </div>
+
+      <div class="row">
+        <label class="auto">
+          <input id="autoToggle" type="checkbox" />
+          Auto
+        </label>
+        <input id="autoInput" type="number" min="1.01" step="0.01" value="2.00" inputmode="decimal" />
+      </div>
+
+      <div class="row big">
+        <button id="placeBtn" class="big-btn">Place Bet</button>
+        <button id="cashBtn" class="big-btn" disabled>Cash Out</button>
+      </div>
+
+      <div class="hint">Tap Place Bet to join current flight. Auto cashouts fire automatically.</div>
+    </section>
   </main>
-
-  <section id="controls">
-    <div class="bet-row">
-      <input id="bet-input" type="number" min="1" step="1" value="1" />
-      <button class="preset" data-val="1">1</button>
-      <button class="preset" data-val="2">2</button>
-      <button class="preset" data-val="5">5</button>
-      <button class="preset" data-val="10">10</button>
-      <button id="half">½</button>
-      <button id="double">x2</button>
-      <button id="max">Max</button>
-    </div>
-
-    <div class="action-row">
-      <label class="auto">
-        <input id="autoToggle" type="checkbox" />
-        Auto Cashout
-      </label>
-      <input id="autoInput" type="number" min="1.01" step="0.01" value="2.00" />
-      <button id="placeBtn">Place Bet</button>
-      <button id="cashBtn" disabled>Cash Out</button>
-    </div>
-  </section>
 
   <script src="script.js"></script>
 </body>
