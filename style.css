@@ -2,7 +2,7 @@
   --bg: #033c03;
   --panel: #0d6211;
   --curve: #ffd400;
-  --btn: #d92b2b;
+  --btn: #28a745; /* green bet */
   --muted: rgba(255,255,255,0.12);
   --yellow: #ffd400;
   --green: #2ecc71;
@@ -40,7 +40,7 @@ canvas{display:block;width:100%;height:420px;border-radius:8px;background:transp
 #placeBtn,#cashBtn{background:var(--btn);border:none;color:#fff;padding:8px 14px;border-radius:8px;font-weight:800;cursor:pointer}
 #cashBtn[disabled]{opacity:0.45;cursor:not-allowed}
 
-/* responsive */
+/* small responsive */
 @media (max-width:720px){
   canvas{height:320px}
   #info{display:none}
