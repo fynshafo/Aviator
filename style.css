@@ -1,82 +1,101 @@
-/* ===== Mobile-First Styles ===== */
 body {
     margin: 0;
-    padding: 0;
-    background-color: #004d26;
+    background-color: #064d26;
     font-family: Arial, sans-serif;
     color: white;
     text-align: center;
 }
 
+.game-container {
+    max-width: 400px;
+    margin: auto;
+    padding: 10px;
+}
+
 #balance {
     font-size: 14px;
-    margin-top: 8px;
+    margin-bottom: 5px;
 }
 
-#multiplier {
-    font-size: 48px;
+.multiplier {
+    font-size: 2.5rem;
     font-weight: bold;
-    margin: 20px 0;
+    margin: 15px 0;
 }
 
-input[type="number"],
-input[type="text"] {
-    width: 80px;
-    padding: 8px;
-    font-size: 16px;
+/* Ball container for animation */
+.ball-container {
+    height: 100px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    margin-bottom: 15px;
+}
+
+/* Ball style */
+.ball {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    background: url('football.png') no-repeat center/cover;
+    border-radius: 50%;
+}
+
+/* Shadow under ball */
+.ball::after {
+    content: "";
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50px;
+    height: 12px;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, transparent 80%);
+    border-radius: 50%;
+    filter: blur(3px);
+}
+
+/* Betting controls */
+.bet-section input[type="number"] {
+    width: 60px;
+    padding: 5px;
     text-align: center;
-    border-radius: 6px;
-    border: none;
-    margin: 6px 0;
+    margin-bottom: 5px;
 }
 
-button {
-    padding: 10px 14px;
-    font-size: 16px;
-    margin: 4px;
+.quick-bets button,
+.action-buttons button {
+    padding: 5px 8px;
+    margin: 3px;
     border: none;
-    border-radius: 6px;
+    background-color: white;
+    color: black;
+    font-weight: bold;
+    border-radius: 5px;
     cursor: pointer;
 }
 
-button:hover {
-    opacity: 0.85;
-}
-
-.bet-buttons {
-    margin: 8px 0;
+.quick-bets button:hover,
+.action-buttons button:hover {
+    background-color: #ccc;
 }
 
 label {
-    font-size: 14px;
+    display: block;
+    margin: 5px 0;
 }
 
-/* ===== Responsive Adjustments for Larger Screens ===== */
+/* Mobile-first */
 @media (min-width: 768px) {
-    #balance {
-        font-size: 16px;
+    .multiplier {
+        font-size: 3rem;
     }
-
-    #multiplier {
-        font-size: 64px;
-        margin: 30px 0;
+    .ball {
+        width: 80px;
+        height: 80px;
     }
-
-    input[type="number"],
-    input[type="text"] {
-        width: 100px;
-        font-size: 18px;
-        padding: 10px;
-    }
-
-    button {
-        padding: 12px 18px;
-        font-size: 18px;
-    }
-}
-
-@media (min-width: 1200px) {
-    #multiplier {
-        font-size: 80px;
+    .ball::after {
+        width: 70px;
+        height: 15px;
     }
 }
