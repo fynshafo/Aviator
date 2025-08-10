@@ -1,109 +1,119 @@
+/* === Base Mobile-First Styles === */
 body {
     margin: 0;
-    padding: 0;
     font-family: Arial, sans-serif;
-    background-color: #064d1f;
+    background-color: #014421; /* Dark green */
     color: white;
-    height: 100vh;
-    overflow: hidden;
-}
-
-.game-container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-}
-
-.header {
-    font-size: 4vw;
-    display: flex;
-    justify-content: space-between;
-    padding: 2vw 4vw;
-    background: #043d17;
-}
-
-.chart-area {
-    position: relative;
-    width: 100vw;
-    height: 55vh;
-    background: #065f26;
-    border-radius: 2vw;
-    overflow: hidden;
-}
-
-#gameChart {
-    width: 100%;
-    height: 100%;
-}
-
-.multiplier {
-    position: absolute;
-    top: 5%;
-    right: 5%;
-    font-size: 8vw;
-    font-weight: bold;
-    text-shadow: 0.5vw 0.5vw 1vw rgba(0,0,0,0.7);
-}
-
-.controls {
-    padding: 3vw;
-    display: flex;
-    flex-direction: column;
-    gap: 3vw;
-}
-
-.bet-section input {
-    width: 100%;
-    font-size: 5vw;
-    padding: 1vw;
-    border-radius: 2vw;
-    border: none;
     text-align: center;
 }
 
-.quick-buttons {
-    display: flex;
-    justify-content: space-around;
-    margin-top: 2vw;
-}
-
-.quick-buttons button {
-    font-size: 5vw;
-    padding: 2vw;
-    border-radius: 2vw;
-    background: #0a7a35;
-    color: white;
-    border: none;
-}
-
-.auto-section {
+/* Balance and round info */
+.header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 12px;
+    font-size: 1.2rem;
 }
 
-.auto-section input {
-    width: 25vw;
-    font-size: 5vw;
-    padding: 1vw;
-    border-radius: 2vw;
+/* Bet amount box */
+.bet-display {
+    background-color: white;
+    color: black;
+    font-size: 2rem;
+    font-weight: bold;
+    border-radius: 12px;
+    padding: 8px;
+    margin: 12px auto;
+    width: 80%;
+    max-width: 320px;
+}
+
+/* Quick bet buttons */
+.quick-bets {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.quick-bets button {
+    background-color: #037d3c;
+    color: white;
     border: none;
-    text-align: center;
+    border-radius: 12px;
+    font-size: 1.4rem;
+    padding: 10px 16px;
+    min-width: 60px;
+    cursor: pointer;
+    box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
+    transition: transform 0.1s ease-in-out;
 }
 
+.quick-bets button:active {
+    transform: scale(0.95);
+}
+
+/* Multiplier display */
+.multiplier-display {
+    background-color: white;
+    color: black;
+    font-size: 1.8rem;
+    font-weight: bold;
+    border-radius: 8px;
+    padding: 6px 12px;
+    display: inline-block;
+    margin: 8px auto;
+}
+
+/* Action buttons */
 .action-buttons {
     display: flex;
-    gap: 2vw;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 15px;
 }
 
 .action-buttons button {
     flex: 1;
-    font-size: 5vw;
-    padding: 2vw;
-    border-radius: 2vw;
+    font-size: 1.4rem;
+    font-weight: bold;
+    padding: 12px;
+    border-radius: 12px;
     border: none;
+    cursor: pointer;
     color: white;
 }
 
-.place { background: #0a7a35; }
-.cashout { background: #cc2a2a; }
+.action-buttons .start {
+    background-color: #28a745;
+}
+
+.action-buttons .cashout {
+    background-color: #dc3545;
+}
+
+/* === Desktop Enhancements === */
+@media (min-width: 768px) {
+    .header {
+        font-size: 1.5rem;
+        padding: 20px;
+    }
+    .bet-display {
+        font-size: 3rem;
+        padding: 12px;
+    }
+    .quick-bets button {
+        font-size: 1.6rem;
+        padding: 12px 20px;
+        min-width: 80px;
+    }
+    .multiplier-display {
+        font-size: 2.2rem;
+    }
+    .action-buttons button {
+        font-size: 1.6rem;
+        padding: 14px;
+    }
+}
